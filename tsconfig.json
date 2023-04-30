@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "module": "CommonJS",
+    "outDir": "dist",
+    "moduleResolution": "node16",
+    "declaration": true,
+    "esModuleInterop": true,
+    "target": "ES2020",
+    "lib": ["ES2020", "ESNext.BigInt", "dom"],
+    "sourceMap": true,
+    "noUnusedLocals": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUnusedParameters": false,
+    "alwaysStrict": true,
+    "strictNullChecks": true,
+    "pretty": true,
+    "allowUnreachableCode": false,
+    "incremental": true,
+    "newLine": "LF"
+  },
+  "include": ["lib"]
+}
