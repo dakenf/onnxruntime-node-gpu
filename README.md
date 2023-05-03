@@ -8,7 +8,8 @@ This is an updated copy of official onnxruntime-node with DirectML and Cuda supp
 1. Works out of the box with DirectML. You can install CUDA and onnx runtime for windows with cuda provider for experiments, if you like.
 ### Linux / WSL2
 1. Install CUDA (tested only on 11-7 but 12 should be supported) https://docs.nvidia.com/cuda/cuda-installation-guide-linux/
-2. Install onnxruntime-linux-x64-gpu-1.14.1 https://github.com/microsoft/onnxruntime/releases/tag/v1.14.1
+2. Install cuDNN https://developer.nvidia.com/rdp/cudnn-archive
+3. Install onnxruntime-linux-x64-gpu-1.14.1 https://github.com/microsoft/onnxruntime/releases/tag/v1.14.1
 
 ## Installation and usage
 It works in the same way as [onnxruntime-node](https://www.npmjs.com/package/onnxruntime-node) 
