@@ -2,6 +2,7 @@
 
 ## Info
 This is an updated copy of official onnxruntime-node with DirectML and Cuda support.
+Demo that runs stable diffusion on GPU with this runtime is here: https://github.com/dakenf/stable-diffusion-nodejs
 
 ## Requirements
 ### Windows
