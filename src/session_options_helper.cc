@@ -9,12 +9,7 @@
 
 #include "common.h"
 #include "session_options_helper.h"
-#ifdef HAS_COREML
-#include <coreml_provider_factory.h>
-#endif
-#ifdef HAS_DML_PROVIDER_FACTORY
 #include <dml_provider_factory.h>
-#endif
 
 const std::unordered_map<std::string, GraphOptimizationLevel> GRAPH_OPT_LEVEL_NAME_TO_ID_MAP = {
     {"disabled", ORT_DISABLE_ALL},
@@ -29,6 +24,7 @@ void ParseExecutionProviders(const Napi::Array epList, Ort::SessionOptions &sess
   for (uint32_t i = 0; i < epList.Length(); i++) {
     Napi::Value epValue = epList[i];
     std::string name;
+    int device_id = 0;
     if (epValue.IsString()) {
       name = epValue.As<Napi::String>().Utf8Value();
     } else if (!epValue.IsObject() || epValue.IsNull() || !epValue.As<Napi::Object>().Has("name") ||
@@ -36,31 +32,23 @@ void ParseExecutionProviders(const Napi::Array epList, Ort::SessionOptions &sess
       ORT_NAPI_THROW_TYPEERROR(epList.Env(), "Invalid argument: sessionOptions.executionProviders[", i,
                                "] must be either a string or an object with property 'name'.");
     } else {
-      name = epValue.As<Napi::Object>().Get("name").As<Napi::String>().Utf8Value();
+      auto obj = epValue.As<Napi::Object>();
+      name = obj.Get("name").As<Napi::String>().Utf8Value();
+      if (obj.Has("deviceId")) {
+          device_id = obj.Get("deviceId").As<Napi::Number>();
+      }
     }
 
     // CPU execution provider
     if (name == "cpu") {
       // TODO: handling CPU EP options
     } else if (name == "cuda") {
-#ifdef HAS_ONNXRUNTIME_CUDA_PROVIDERS
-        int device_id = 0;
         Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_CUDA(sessionOptions, device_id));
-#endif
-    } else if (name == "directml") {
-#ifdef HAS_DML_PROVIDER_FACTORY
-        int device_id = 0;
+    } else if (name == "dml") {
         Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_DML(sessionOptions, device_id));
-#endif
-    } else if (name == "coreml") {
-#ifdef HAS_COREML
-      uint32_t coreml_flags = 0;
-      coreml_flags |= COREML_FLAG_ENABLE_ON_SUBGRAPH;
-      OrtSessionOptionsAppendExecutionProvider_CoreML(sessionOptions, coreml_flags);
-#endif
     } else {
-        ORT_NAPI_THROW_ERROR(epList.Env(), "Invalid argument: sessionOptions.executionProviders[", i,
-                             "] is unsupported: '", name, "'.");
+      ORT_NAPI_THROW_ERROR(epList.Env(), "Invalid argument: sessionOptions.executionProviders[", i,
+                           "] is unsupported: '", name, "'.");
     }
   }
 }

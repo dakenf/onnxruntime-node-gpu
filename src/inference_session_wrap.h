@@ -32,6 +32,15 @@ private:
    * @throw nothing
    */
   Napi::Value GetInputNames(const Napi::CallbackInfo &info);
+
+  /**
+  * [sync] get input names.
+  * @param nothing
+  * @returns an object array.
+  * @throw nothing
+  */
+  Napi::Value GetInputs(const Napi::CallbackInfo &info);
+
   /**
    * [sync] get output names.
    * @param nothing
@@ -67,6 +76,7 @@ private:
   std::vector<std::string> inputNames_;
   std::vector<ONNXType> inputTypes_;
   std::vector<ONNXTensorElementDataType> inputTensorElementDataTypes_;
+  std::vector<std::vector<int64_t>> inputTensorElementShapes_;
   std::vector<std::string> outputNames_;
   std::vector<ONNXType> outputTypes_;
   std::vector<ONNXTensorElementDataType> outputTensorElementDataTypes_;

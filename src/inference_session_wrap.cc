@@ -12,6 +12,91 @@
 Napi::FunctionReference InferenceSessionWrap::constructor;
 Ort::Env *InferenceSessionWrap::ortEnv;
 
+std::string tensorElementTypeToString(ONNXTensorElementDataType type) {
+    switch (type) {
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_UNDEFINED:
+            return "undefined";
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT:
+            return "float";
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8:
+            return "uint8";
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT8:
+            return "int8";
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT16:
+            return "uint16";
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT16:
+            return "int16";
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32:
+            return "int32";
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64:
+            return "int64";
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_STRING:
+            return "string";
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_BOOL:
+            return "bool";
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16:
+            return "float16";
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_DOUBLE:
+            return "double";
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT32:
+            return "uint32";
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT64:
+            return "uint64";
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_COMPLEX64:
+            return "complex64";
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_COMPLEX128:
+            return "complex128";
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_BFLOAT16:
+            return "bfloat16";
+        default:
+            return "unknown";
+    }
+}
+
+std::string onnxTypeToString(ONNXType type) {
+    switch (type) {
+        case ONNX_TYPE_UNKNOWN:
+            return "unknown";
+        case ONNX_TYPE_TENSOR:
+            return "tensor";
+        case ONNX_TYPE_SEQUENCE:
+            return "sequence";
+        case ONNX_TYPE_MAP:
+            return "map";
+        case ONNX_TYPE_OPAQUE:
+            return "opaque";
+        case ONNX_TYPE_SPARSETENSOR:
+            return "sparseTensor";
+        case ONNX_TYPE_OPTIONAL:
+            return "optional";
+        default:
+            return "unknown";
+    }
+}
+
+Napi::Array createNAPIObjectFromModelInput(napi_env env,
+                                           const std::vector<std::string>& inputNames,
+                                           const std::vector<ONNXType>& inputTypes,
+                                           const std::vector<ONNXTensorElementDataType>& inputDataTypes,
+                                           const std::vector<std::vector<int64_t>>& inputShapes) {
+    Napi::EscapableHandleScope scope(env);
+
+    // Create an empty array
+    auto result = Napi::Array::New(env, inputNames.size());
+
+    for (std::size_t i = 0; i < inputNames.size(); ++i) {
+        auto item = Napi::Object::New(env);
+        item.Set("name", Napi::Value::From(env, inputNames[i]));
+        item.Set("type", Napi::Value::From(env, onnxTypeToString(inputTypes.at(i))));
+        item.Set("tensorElementDataType", Napi::Value::From(env, tensorElementTypeToString(inputDataTypes[i])));
+        item.Set("tensorElementShape", CreateNapiArrayFrom(env, inputShapes[i]));
+
+        result.Set(i, item);
+    }
+
+    return result;
+}
+
 Napi::Object InferenceSessionWrap::Init(Napi::Env env, Napi::Object exports) {
   // create ONNX runtime env
 //  Ort::InitApi();
@@ -24,6 +109,7 @@ Napi::Object InferenceSessionWrap::Init(Napi::Env env, Napi::Object exports) {
       env, "InferenceSession",
       {InstanceMethod("loadModel", &InferenceSessionWrap::LoadModel), InstanceMethod("run", &InferenceSessionWrap::Run),
        InstanceAccessor("inputNames", &InferenceSessionWrap::GetInputNames, nullptr, napi_default, nullptr),
+       InstanceAccessor("inputs", &InferenceSessionWrap::GetInputs, nullptr, napi_default, nullptr),
        InstanceAccessor("outputNames", &InferenceSessionWrap::GetOutputNames, nullptr, napi_default, nullptr)});
 
   constructor = Napi::Persistent(func);
@@ -91,6 +177,10 @@ Napi::Value InferenceSessionWrap::LoadModel(const Napi::CallbackInfo &info) {
       inputTensorElementDataTypes_.emplace_back(onnxType == ONNX_TYPE_TENSOR
                                                     ? typeInfo.GetTensorTypeAndShapeInfo().GetElementType()
                                                     : ONNX_TENSOR_ELEMENT_DATA_TYPE_UNDEFINED);
+      std::vector<int64_t> empty;
+      inputTensorElementShapes_.emplace_back(onnxType == ONNX_TYPE_TENSOR
+                                                ? typeInfo.GetTensorTypeAndShapeInfo().GetShape()
+                                                : empty);
     }
 
     count = session_->GetOutputCount();
@@ -122,6 +212,14 @@ Napi::Value InferenceSessionWrap::GetInputNames(const Napi::CallbackInfo &info) 
   return scope.Escape(CreateNapiArrayFrom(env, inputNames_));
 }
 
+Napi::Value InferenceSessionWrap::GetInputs(const Napi::CallbackInfo &info) {
+    Napi::Env env = info.Env();
+    ORT_NAPI_THROW_ERROR_IF(!this->initialized_, env, "Session is not initialized.");
+
+    Napi::EscapableHandleScope scope(env);
+    return scope.Escape(createNAPIObjectFromModelInput(env, inputNames_, inputTypes_, inputTensorElementDataTypes_, inputTensorElementShapes_));
+}
+
 Napi::Value InferenceSessionWrap::GetOutputNames(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   ORT_NAPI_THROW_ERROR_IF(!this->initialized_, env, "Session is not initialized.");
@@ -151,7 +249,7 @@ Napi::Value InferenceSessionWrap::Run(const Napi::CallbackInfo &info) {
   std::vector<bool> reuseOutput;
   size_t inputIndex = 0;
   size_t outputIndex = 0;
-    OrtMemoryInfo* memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault).release();
+  OrtMemoryInfo* memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault).release();
 
   try {
     for (auto &name : inputNames_) {

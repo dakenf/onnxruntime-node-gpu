@@ -18,13 +18,13 @@ if (WIN32)
     add_definitions(-DHAS_ONNXRUNTIME_CUDA_PROVIDERS)
     add_definitions(-DHAS_DML_PROVIDER_FACTORY)
 elseif(UNIX AND NOT APPLE)
-    find_library(ONNXRUNTIME_PROVIDERS_CUDA_LIB NAMES onnxruntime_providers_cuda HINTS ${CUSTOM_LIBRARY_PATHS})
-    if(ONNXRUNTIME_PROVIDERS_CUDA_LIB)
-        message(STATUS "Found ONNX Runtime CUDA providers library: ${ONNXRUNTIME_PROVIDERS_CUDA_LIB}")
-        add_definitions(-DHAS_ONNXRUNTIME_CUDA_PROVIDERS)
-    else()
-        message(STATUS "ONNX Runtime CUDA providers library not found")
-    endif()
+#    find_library(ONNXRUNTIME_PROVIDERS_CUDA_LIB NAMES onnxruntime_providers_cuda HINTS ${CUSTOM_LIBRARY_PATHS})
+#    if(ONNXRUNTIME_PROVIDERS_CUDA_LIB)
+#        message(STATUS "Found ONNX Runtime CUDA providers library: ${ONNXRUNTIME_PROVIDERS_CUDA_LIB}")
+#        add_definitions(-DHAS_ONNXRUNTIME_CUDA_PROVIDERS)
+#    else()
+#        message(STATUS "ONNX Runtime CUDA providers library not found")
+#    endif()
 endif ()
 
 file(GLOB ORT_NODEJS_BINDING_SOURCE_FILES ${CMAKE_SOURCE_DIR}/src/*.cc)
@@ -38,8 +38,9 @@ include(cmake/FetchOnnxruntime.cmake)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
         ${CMAKE_JS_LIB}
-        $<$<BOOL:${ONNXRUNTIME_PROVIDERS_CUDA_LIB}>:${ONNXRUNTIME_PROVIDERS_CUDA_LIB}>
-        ${CUDA_LIBRARIES})
+#        $<$<BOOL:${ONNXRUNTIME_PROVIDERS_CUDA_LIB}>:${ONNXRUNTIME_PROVIDERS_CUDA_LIB}>
+#        ${CUDA_LIBRARIES}
+        )
 
 # Set the target properties
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")

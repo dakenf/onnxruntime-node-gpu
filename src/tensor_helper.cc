@@ -105,60 +105,6 @@ const std::unordered_map<std::string, ONNXTensorElementDataType> DATA_TYPE_NAME_
     {"float64", ONNX_TENSOR_ELEMENT_DATA_TYPE_DOUBLE}, {"uint32", ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT32},
     {"uint64", ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT64}};
 
-class MemoryInfoManager {
-public:
-    static MemoryInfoManager& Instance() {
-        static MemoryInfoManager instance;
-        return instance;
-    }
-
-    OrtMemoryInfo* GetMemoryInfoForProvider(Ort::Session &session, const std::string& provider) {
-        std::lock_guard<std::mutex> lock(mutex_);
-
-        if (memory_info_map_.find(provider) == memory_info_map_.end()) {
-            OrtMemoryInfo* memory_info;
-//            if (provider == "cuda") {
-//                Ort::ThrowOnError(Ort::GetApi().CreateMemoryInfo("Cuda", OrtArenaAllocator, 0, OrtMemTypeDefault, &memory_info));
-////            } else if (provider == "directml") {
-////                Ort::ThrowOnError(Ort::GetApi().CreateMemoryInfo("Dml", OrtArenaAllocator, 0, OrtMemTypeDefault, &memory_info));
-//            } else {
-                // Use CPU allocator as the default
-                memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault).release();
-//            }
-            memory_info_map_[provider] = memory_info;
-        }
-
-        return memory_info_map_[provider];
-    }
-
-private:
-    MemoryInfoManager() = default;
-    ~MemoryInfoManager() {
-        for (auto& pair : memory_info_map_) {
-            Ort::GetApi().ReleaseMemoryInfo(pair.second);
-        }
-    }
-
-    MemoryInfoManager(const MemoryInfoManager&) = delete;
-    MemoryInfoManager& operator=(const MemoryInfoManager&) = delete;
-
-    std::unordered_map<std::string, OrtMemoryInfo*> memory_info_map_;
-    std::mutex mutex_;
-};
-
-OrtMemoryInfo* GetMemoryInfoForProvider(Ort::Session &session, const std::string& provider) {
-    return MemoryInfoManager::Instance().GetMemoryInfoForProvider(session, provider);
-}
-
-//Ort::Allocator GetAllocatorForProvider(Ort::Session& session, const std::string& provider) {
-//    Ort::Allocator allocator;
-//    OrtMemoryInfo* memory_info = GetMemoryInfoForProvider(session, provider);
-//    allocator = Ort::Allocator::Create(session, memory_info);
-//    Ort::GetApi().ReleaseMemoryInfo(memory_info);
-//
-//    return allocator;
-//}
-
 // currently only support tensor
 Ort::Value NapiValueToOrtValue(Napi::Env env, Napi::Value value, OrtMemoryInfo* memory_info) {
   ORT_NAPI_THROW_TYPEERROR_IF(!value.IsObject(), env, "Tensor must be an object.");
