@@ -1,5 +1,7 @@
 # ONNX runtime for node with gpu support (DirectML/Cuda)
 
+# THIS REPOSITORY IS OBSOLETE SINCE CHANGES WERE MERGED TO OFFIFIAL RUNTIME https://github.com/microsoft/onnxruntime/pull/16050
+
 ## Info
 This is an updated copy of official onnxruntime-node with DirectML and Cuda support.
 Demo that runs stable diffusion on GPU with this runtime is here: https://github.com/dakenf/stable-diffusion-nodejs
